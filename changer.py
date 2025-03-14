@@ -4,9 +4,16 @@ import os
 import json
 import requests
 from dotenv import load_dotenv
+import streamlit as st
+from openai import OpenAI
 
 load_dotenv()
 EXCHANGERATE_API_KEY = os.getenv('EXCHANGERATE_API_KEY')
+token = os.environ["GITHUB_TOKEN"]
+endpoint = "https://models.inference.ai.azure.com"
+model_name = "gpt-4o-mini"
+
+
 
 def get_exchange_rate(base: str, target: str, amount: str) -> Tuple:
     """Return a tuple of (base, target, amount, conversion_result (2 decimal places))"""
@@ -14,15 +21,26 @@ def get_exchange_rate(base: str, target: str, amount: str) -> Tuple:
     response = json.loads(requests.get(url).text)
     return (base, target, amount, f"{response['conversion_result']:.2f}")
 
-print(get_exchange_rate("USD", "GBP", "200"))
-
 def call_llm(textbox_input) -> Dict:
     """Make a call to the LLM with the textbox_input as the prompt.
        The output from the LLM should be a JSON (dict) with the base, amount and target"""
     try:
-        completion = ...
+        client = OpenAI(
+            base_url=endpoint,
+            api_key=token,
+        )
+
+        completion = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "user",
+                    "content": textbox_input,
+                }
+            ],
+            model=model_name,
+        )
     except Exception as e:
-        print(f"Exception {e} for {text}")
+        print(f"Exception {e} for {textbox_input}")
     else:
         return completion
 
@@ -39,3 +57,17 @@ def run_pipeline():
         st.write(f"(Function calling not used) and response from the model")
     else:
         st.write("NotImplemented")
+
+
+
+
+
+# Title
+st.title('Change')
+
+# Text Input
+text_input = st.text_input("Enter some text")
+
+# Button
+if st.button('Submit'):
+    st.write(call_llm(text_input).choices[0].message.content)
